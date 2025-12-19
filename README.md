@@ -120,4 +120,5 @@ To run the Python pipeline:
 5. For the "Reference Ventricle Path", input the full path to reference_ventricle.jpg, which is provided to you in the references folder
 6. For the "Reference Background Path", input the full path to the reference_background.npy, which is provided to you in the references folder
 7. Press Go to run the algorithm
+8. Check the save folder to see that the images are uploaded
 
