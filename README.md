@@ -25,9 +25,25 @@ course at Columbia University.
 
 ---
 
+## Repository Structure
+
+DSP-Final-Project-2025-Echocardiograms/
+├── run_me.m
+├── echodsp_leaflet_demo1.m
+├── echodsp_leaflet_demo2.m
+├── left_ventricle_identification_alg.py
+├── heart_images/
+│   └── (echocardiogram image dataset)
+├── references/
+│   └── (papers, documentation, and reference material)
+├── figures/
+│   └── (output figures and visualizations)
+└── README.md
+
 ## Requirements
 
-### MATLAB Dependencies
+### MATLAB
+## MATLAB Dependencies
 
 The following MATLAB toolboxes are required to run
 `echodsp_leaflet_demo1.m`:
@@ -72,5 +88,36 @@ This repository contains two independent algorithms:
 1. A MATLAB-based mitral valve leaflet detection algorithm
 2. A Python-based left ventricle identification algorithm
 
-They can be run separately by simply downloading the repository, and running the `run_me.m` and `run_me.py` files individually.
+They can be run separately as described below.
+
+---
+
+### Mitral Valve Leaflet Detection (MATLAB)
+
+The mitral valve leaflet detection algorithm is implemented in MATLAB and
+operates on echocardiogram video data.
+
+To run the MATLAB pipeline:
+
+1. Open MATLAB
+2. Set the current working directory to the root of this repository
+3. Run the following command in the MATLAB Command Window:
+
+```matlab
+run_me
+```
+
+### Left Ventricle Identification (Python)
+The Left Ventricle Identification algorithm is implemented in Python and
+operates on echocardiogram image data.
+
+To run the Python pipeline:
+
+1. Download the references and heart_image folder
+2. Run the left_ventricle_identification_alg.py Python program, which will cause a GUI to appear
+3. For the "Heart Images Folder Path", input the full path to the heart_images folder
+4. For the "Save Folder Path", input the full path to the folder you want to save the images to
+5. For the "Reference Ventricle Path", input the full path to reference_ventricle.jpg, which is provided to you in the references folder
+6. For the "Reference Background Path", input the full path to the reference_background.npy, which is provided to you in the references folder
+7. Press Go to run the algorithm
 
