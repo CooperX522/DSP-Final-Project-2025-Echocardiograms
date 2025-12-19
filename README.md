@@ -27,8 +27,7 @@ course at Columbia University.
 
 ## Requirements
 
-### MATLAB
-## MATLAB Dependencies
+### MATLAB Dependencies
 
 The following MATLAB toolboxes are required to run
 `echodsp_leaflet_demo1.m`:
