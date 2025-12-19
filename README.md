@@ -25,21 +25,6 @@ course at Columbia University.
 
 ---
 
-## Repository Structure
-
-DSP-Final-Project-2025-Echocardiograms/
-├── run_me.m
-├── echodsp_leaflet_demo1.m
-├── echodsp_leaflet_demo2.m
-├── left_ventricle_identification_alg.py
-├── heart_images/
-│   └── (echocardiogram image dataset)
-├── references/
-│   └── (papers, documentation, and reference material)
-├── figures/
-│   └── (output figures and visualizations)
-└── README.md
-
 ## Requirements
 
 ### MATLAB
@@ -88,23 +73,5 @@ This repository contains two independent algorithms:
 1. A MATLAB-based mitral valve leaflet detection algorithm
 2. A Python-based left ventricle identification algorithm
 
-They can be run separately as described below.
-
----
-
-### Mitral Valve Leaflet Detection (MATLAB)
-
-The mitral valve leaflet detection algorithm is implemented in MATLAB and
-operates on echocardiogram video data.
-
-To run the MATLAB pipeline:
-
-1. Open MATLAB
-2. Set the current working directory to the root of this repository
-3. Run the following command in the MATLAB Command Window:
-
-```matlab
-run_me
-```
-
+They can be run separately by simply downloading the repository, and running the `run_me.m` and `run_me.py` files individually.
 
