@@ -104,7 +104,7 @@ To run the MATLAB pipeline:
 3. Run the following command in the MATLAB Command Window:
 
 ```matlab
-run_me
+run_me.m
 ```
 
 ### Left Ventricle Identification (Python)
@@ -114,7 +114,7 @@ operates on echocardiogram image data.
 To run the Python pipeline:
 
 1. Download the references and heart_image folder
-2. Run the left_ventricle_identification_alg.py Python program, which will cause a GUI to appear
+2. Run the ```run_me.py``` Python program, which will cause a GUI to appear
 3. For the "Heart Images Folder Path", input the full path to the heart_images folder
 4. For the "Save Folder Path", input the full path to the folder you want to save the images to
 5. For the "Reference Ventricle Path", input the full path to reference_ventricle.jpg, which is provided to you in the references folder
