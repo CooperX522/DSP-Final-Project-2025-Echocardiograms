@@ -75,6 +75,7 @@ The following MATLAB toolboxes are required to run
 ### Python
 - Python 3.8 or newer
 - Required Python packages:
+  - os
   - numpy
   - opencv-python
   - matplotlib
@@ -114,11 +115,13 @@ operates on echocardiogram image data.
 To run the Python pipeline:
 
 1. Download the references and heart_image folder
-2. Run the ```run_me.py``` Python program, which will cause a GUI to appear
-3. For the "Heart Images Folder Path", input the full path to the heart_images folder
-4. For the "Save Folder Path", input the full path to the folder you want to save the images to
-5. For the "Reference Ventricle Path", input the full path to reference_ventricle.jpg, which is provided to you in the references folder
-6. For the "Reference Background Path", input the full path to the reference_background.npy, which is provided to you in the references folder
-7. Press Go to run the algorithm
-8. Check the save folder to see that the images are uploaded
+2. Open ```run_me.py``` Python program in your preferred IDE.
+3. In your IDE terminal, change your directory to the folder. 
+4. Run the ```run_me.py``` Python program, an LV diagram calculation will pop out. ~~which will cause a GUI to appear~~
+~~3. For the "Heart Images Folder Path", input the full path to the heart_images folder~~
+~~4. For the "Save Folder Path", input the full path to the folder you want to save the images to~~
+~~5. For the "Reference Ventricle Path", input the full path to reference_ventricle.jpg, which is provided to you in the references folder~~
+~~6. For the "Reference Background Path", input the full path to the reference_background.npy, which is provided to you in the references folder~~
+~~7. Press Go to run the algorithm~~
+~~8. Check the save folder to see that the images are uploaded~~
 
