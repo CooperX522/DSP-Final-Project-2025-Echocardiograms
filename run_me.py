@@ -8,116 +8,8 @@ from skimage.feature import peak_local_max
 from scipy.spatial import cKDTree
 import os
 
-import tkinter as tk
-from tkinter import filedialog, messagebox
 
 #-------- Definitions --------
-
-#---------- GUI Definitions ----------
-def browse_folder(entry):
-    folder_path = filedialog.askdirectory()
-    if folder_path:
-        entry.delete(0, tk.END)
-        entry.insert(0, folder_path)
-
-def browse_file(entry):
-    file_path = filedialog.askopenfilename()
-    if file_path:
-        entry.delete(0, tk.END)
-        entry.insert(0, file_path)
-
-def browse_save(entry):
-    save_path = filedialog.asksaveasfilename(defaultextension=".txt")
-    if save_path:
-        entry.delete(0, tk.END)
-        entry.insert(0, save_path)
-
-def start_program():
-	heart_folder = heart_folder_entry.get()
-	save_lv = save_lv_entry.get()
-	reference_vent = reference_entry.get()
-	background = background_entry.get()
-
-	# Validate inputs
-	if not all([heart_folder, save_lv, reference_vent, background]):
-	    messagebox.showerror("Error", "Please provide all paths!")
-	    return
-
-	#Load background mask
-	background_frame = np.load(background)
-	background_frame = background_frame.astype(np.int32)
-
-	image_folder = heart_folder
-	images = []
-	for filename in os.listdir(image_folder):
-		if filename.lower().endswith(('.jpg', '.png', '.jpeg')):
-		    img_path = os.path.join(image_folder, filename)
-		    img = cv2.imread(img_path)
-		    if img is not None:
-		    	img = img.astype(np.int32) 
-		    	images.append(img)
-
-	#Load the reference ventricle
-	ref_vent = cv2.imread(reference_vent, cv2.IMREAD_GRAYSCALE)
-	ref_vent = resize_ref_vent(images[0],ref_vent)
-
-	black_screen = np.zeros((images[0].shape[0], images[0].shape[1]))
-
-	i = 0
-	for frame in images:
-		processed_frame = clean_image(frame, background_frame)
-		watershed_results = run_watershed(processed_frame, background_frame)
-
-		labels, components = find_components(watershed_results)
-		components = connect_ventricle_tail(labels, components, watershed_results)
-
-		dist_map, grad_map = create_reference_maps(frame, ref_vent)
-
-		pred_x = 60
-		pred_y = 60
-		pred_area = 2327
-
-		shape_error_list = calculate_shape_error(components, frame, ref_vent, grad_map, dist_map) 
-		dist_error_list = calculate_dist_error(components, pred_x, pred_y)
-		area_error_list = calculate_area_error(components, pred_area)
-
-		shape_thr = 25
-		dist_thr = 25
-		area_thr = 2327
-
-		components, shape_error_list, dist_error_list, area_error_list = remove_outliers(components, shape_error_list, dist_error_list, area_error_list, shape_thr, dist_thr, area_thr)
-
-		shape_error_list = normalize_list(shape_error_list)
-		dist_error_list = normalize_list(dist_error_list)
-		area_error_list = normalize_list(dist_error_list)
-
-		shape_error_array = np.array(shape_error_list)
-		dist_error_array = np.array(dist_error_list)
-		area_error_array = np.array(area_error_list)
-
-		shape_error_weight = 0.4
-		dist_error_weight = 0.4
-		area_error_weight = 0.2
-
-		total_error_array = (shape_error_weight * shape_error_array) + (dist_error_weight * dist_error_array) + (area_error_weight * area_error_array) 
-
-		if len(total_error_array) == 0:
-			left_vent = black_screen
-		else:
-			min_index = np.argmin(total_error_array)
-			left_vent = components[min_index]
-
-		i += 1
-		save_folder = save_lv
-		save_name = 'image_' + str(i) + '.jpg'
-		save_path = os.path.join(save_folder, save_name)
-		cv2.imwrite(save_path, left_vent)
-		
-	
-
-
-
-
 def obtain_frame(video_path):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -146,13 +38,17 @@ def find_ref_vent_contour(ref_vent):
 
 	return ref_vent_contour
 
-def normalize_list(p_list):
+def calc_error_thr(vent_contour, ref_contour):
+	vent_contour_flat = vent_contour.reshape(-1,2)
+	ref_contour_flat = ref_contour.reshape(-1,2)
+	tree = cKDTree(ref_contour_flat)
+	min_dists, idxs = tree.query(vent_contour_flat)
 
-	array = np.array(p_list)
-	norm_array = array / np.linalg.norm(array)
-	norm_list = norm_array.tolist()
+	dist_sum = np.sum(min_dists)
+	dist_num = len(min_dists)
+	error_thr = dist_sum / dist_num
 
-	return norm_list
+	return error_thr
 
 def find_angle(component):
 	
@@ -181,6 +77,11 @@ def find_center(component):
 
 def calculate_dist_error(components, pred_x_center, pred_y_center):
 		
+	'''
+	comp_width = components[0].shape[0]
+	comp_height = components[0].shape[0]
+	max_distance = (comp_width + comp_height) / 2
+	'''
 	dist_error_list = []
 	for comp in components:
 
@@ -202,34 +103,30 @@ def calculate_area_error(components, pred_area):
 	for comp in components:
 		act_area = np.sum(comp == 255)
 		area_error = abs(act_area - pred_area)
-		
+
 		area_error_list.append(area_error)
 
 	return area_error_list
 
-def calculate_shape_error(components, frame, ref_vent, grad_map, dist_map):
+def calculate_shape_error(components, frame, ref_vent, grad_map):
 	
 	shape_error_list = []
 	for comp in components:
 		center_comp = center_component(comp)
 		rotate_center_comp = rotate_component(center_comp)
 		scale_rotate_center_comp = scale_component(rotate_center_comp, frame, ref_vent)
-		iterations = find_obj_to_ref_iterations(frame, ref_vent, rotate_center_comp, grad_map, dist_map)
+		iterations = find_obj_to_ref_iterations(frame, ref_vent, rotate_center_comp, grad_map)
 		shape_error_list.append(iterations)
 
 	return shape_error_list
 
-def calc_error_thr(vent_contour, ref_contour):
-	vent_contour_flat = vent_contour.reshape(-1,2)
-	ref_contour_flat = ref_contour.reshape(-1,2)
-	tree = cKDTree(ref_contour_flat)
-	min_dists, idxs = tree.query(vent_contour_flat)
+def normalize_list(p_list):
 
-	dist_sum = np.sum(min_dists)
-	dist_num = len(min_dists)
-	error_thr = dist_sum / dist_num
+	array = np.array(p_list)
+	norm_array = array / np.linalg.norm(array)
+	norm_list = norm_array.tolist()
 
-	return error_thr
+	return norm_list
 
 #---------- Pipeline Definitions ----------
 def clean_image(frame, background_frame):
@@ -258,12 +155,12 @@ def clean_image(frame, background_frame):
 
 	#Creating a binary mask
 	binary_frame = blurred_frame.copy()	
-	binary_frame = np.where(binary_frame <= 90, 255, 0)
+	binary_frame = np.where(binary_frame <= 90, 255, 0) # we had it at 90
 	binary_frame = binary_frame.astype(np.uint8)
 
-	return binary_frame
+	return binary_frame #processed_frame
 
-def run_watershed(processed_frame, background_frame):
+def run_watershed(processed_frame):
 	#Find the basin areas
 	kernel = np.ones((3,3), np.uint8)
 	basin = cv2.dilate(processed_frame, kernel, iterations=1)
@@ -279,8 +176,6 @@ def run_watershed(processed_frame, background_frame):
 	intensity_map = scale - intensity_map
 	intensity_map = intensity_map.astype(np.uint8)
 	intensity_map = cv2.cvtColor(intensity_map, cv2.COLOR_GRAY2BGR)
-
-	#Find the basin center points
 
 	vent_diam = 20
 	thr = vent_diam / 2
@@ -344,7 +239,7 @@ def create_reference_maps(frame, ref_vent):
 
 	return dist_map, grad_map 
 
-def find_obj_to_ref_iterations(frame, ref_vent, comp, grad_map, dist_map):
+def find_obj_to_ref_iterations(frame, ref_vent, comp, grad_map):
 
 	act_height = frame.shape[0]
 	act_width =frame.shape[1]
@@ -444,8 +339,9 @@ def connect_ventricle_tail(labels, components, watershed_results):
 		        	break
 
 		line_values = np.array(line_values)
-		tail_label_idx = np.where(~np.isin(line_values, (-1, 0, 1)))[0]		
-		if len(tail_label_idx) > 0: 
+		tail_label_idx = np.where(~np.isin(line_values, (-1, 0, 1)))[0] #-1 stands for outline. 0 Stands for current component. 1 stands for background.
+			
+		if len(tail_label_idx) > 0: #If no other component found underneath, there is no need to append. so we skip to the next loop
 			tail_label_idx = tail_label_idx[0]
 		else:
 			continue
@@ -571,15 +467,6 @@ def remove_outliers(components, shape_error_list, dist_error_list, area_error_li
 	dist_error_array = np.array(dist_error_list)
 	area_error_array = np.array(area_error_list)
 
-	print('shape_thr', shape_thr)
-	print('dist_thr', dist_thr)
-	print('area_thr', area_thr)
-
-	print(shape_error_array)
-	print(dist_error_array)
-	print(area_error_array)
-
-
 	shape_outlier_indices = np.argwhere(shape_error_array > shape_thr)
 	dist_outlier_indices = np.argwhere(dist_error_array > dist_thr)
 	area_outlier_indices = np.argwhere(area_error_array > area_thr)
@@ -600,44 +487,69 @@ def remove_outliers(components, shape_error_list, dist_error_list, area_error_li
 
 #-------- Main --------
 
-root = tk.Tk()
-root.title("Left Ventricle Identification GUI")
-root.geometry("600x600")
+#Load background mask
+background_frame = np.load('references/reference_background.npy')
+background_frame = background_frame.astype(np.int32)
 
-# Description at the top
-description_text = (
-    "Heart Images Folder Path: The folder that contains all of the heart images provided to you as heart_images.\n"
-    "Save Path: The folder where the identified left ventricle images will be saved.\n"
-    "Reference Ventricle Path: The path to the reference_ventricle image provided to you in the references folder as reference_ventricle.\n"
-    "Reference Background Path: The path to the background numpy array provided to you in the references folder as reference_background."
-)
-tk.Label(root, text=description_text, justify="left", wraplength=550).pack(pady=10)
+#Load image of interest
+video_path = 'heart_images/0X54B116C8FC863906.jpg'
+frame = obtain_frame(video_path)
+frame = frame.astype(np.int32)
 
-# Heart Images Folder Path
-tk.Label(root, text="Heart Images Folder Path:").pack(pady=5)
-heart_folder_entry = tk.Entry(root, width=60)
-heart_folder_entry.pack(pady=5)
-tk.Button(root, text="Browse", command=lambda: browse_folder(heart_folder_entry)).pack()
+#Load the reference ventricle
+ref_vent = cv2.imread('references/reference_ventricle.jpg', cv2.IMREAD_GRAYSCALE)
+ref_vent = resize_ref_vent(frame,ref_vent)
 
-# Save Left Ventricle Identification Path
-tk.Label(root, text="Save Folder Path:").pack(pady=5)
-save_lv_entry = tk.Entry(root, width=60)
-save_lv_entry.pack(pady=5)
-tk.Button(root, text="Browse", command=lambda: browse_save(save_lv_entry)).pack()
+processed_frame = clean_image(frame, background_frame)
+watershed_results = run_watershed(processed_frame)
 
-# Reference Ventricle Path
-tk.Label(root, text="Reference Ventricle Path:").pack(pady=5)
-reference_entry = tk.Entry(root, width=60)
-reference_entry.pack(pady=5)
-tk.Button(root, text="Browse", command=lambda: browse_file(reference_entry)).pack()
+labels, components = find_components(watershed_results)
+components = connect_ventricle_tail(labels, components, watershed_results)
 
-# Background Path
-tk.Label(root, text="Reference Background Path:").pack(pady=5)
-background_entry = tk.Entry(root, width=60)
-background_entry.pack(pady=5)
-tk.Button(root, text="Browse", command=lambda: browse_file(background_entry)).pack()
+dist_map, grad_map = create_reference_maps(frame, ref_vent)
 
-# Go button
-tk.Button(root, text="Go", bg="green", fg="black", width=25, command=start_program).pack(pady=15)
+pred_x = 60
+pred_y = 60
+pred_area = 2327
 
-root.mainloop()
+shape_error_list = calculate_shape_error(components, frame, ref_vent, grad_map) 
+dist_error_list = calculate_dist_error(components, pred_x, pred_y)
+area_error_list = calculate_area_error(components, pred_area)
+
+shape_thr = 25
+dist_thr = 25
+area_thr = 2327
+
+components, shape_error_list, dist_error_list, area_error_list = remove_outliers(components, shape_error_list, dist_error_list, area_error_list, shape_thr, dist_thr, area_thr)
+
+shape_error_list = normalize_list(shape_error_list)
+dist_error_list = normalize_list(dist_error_list)
+area_error_list = normalize_list(dist_error_list)
+
+shape_error_array = np.array(shape_error_list)
+dist_error_array = np.array(dist_error_list)
+area_error_array = np.array(area_error_list)
+
+shape_error_weight = 0.4
+dist_error_weight = 0.4
+area_error_weight = 0.2
+
+total_error_array = (shape_error_weight * shape_error_array) + (dist_error_weight * dist_error_array) + (area_error_weight * area_error_array) 
+
+min_index = np.argmin(total_error_array)
+left_vent = components[min_index]
+
+#Plot the Results
+fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+
+axs[0].imshow(frame)
+axs[0].set_title("Raw Heart Image")
+
+axs[1].imshow(left_vent)
+axs[1].set_title("Identified Left Ventricle")
+
+plt.tight_layout()
+plt.show()
+
+
+
