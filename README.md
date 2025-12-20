@@ -25,21 +25,6 @@ course at Columbia University.
 
 ---
 
-## Repository Structure
-
-DSP-Final-Project-2025-Echocardiograms/
-├── run_me.m
-├── echodsp_leaflet_demo1.m
-├── echodsp_leaflet_demo2.m
-├── left_ventricle_identification_alg.py
-├── heart_images/
-│   └── (echocardiogram image dataset)
-├── references/
-│   └── (papers, documentation, and reference material)
-├── figures/
-│   └── (output figures and visualizations)
-└── README.md
-
 ## Requirements
 
 ### MATLAB
